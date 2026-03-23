@@ -1,0 +1,23 @@
+# Python environment
+.venv/
+__pycache__/
+
+# Data Ingestion (Bronze, Silver, Gold)
+data/
+outputs/
+*.json
+*.csv
+*.parquet
+
+# Databases
+*.db
+*.sqlite3
+
+# Security & Config
+.env
+auth.json
+.airflow/
+
+# Playwright
+test-results/
+pw-report/
