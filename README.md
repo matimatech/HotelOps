@@ -1,6 +1,6 @@
 # 🏨 HotelOps — Platform Intelijen Harga Hotel Indonesia
 
-> Memantau dan membandingkan harga hotel secara otomatis dari **Agoda**, **Traveloka**, dan **Tiket.com** untuk membantu pemilik hotel kecil-menengah Indonesia menganalisis harga kompetitor — insight yang selama ini hanya bisa diakses hotel besar dengan tools mahal.
+> Memantau dan membandingkan harga hotel secara otomatis dari **Agoda**, **Traveloka**, dan **Tiket** untuk membantu pemilik hotel kecil-menengah Indonesia menganalisis harga kompetitor — insight yang selama ini hanya bisa diakses hotel besar dengan tools mahal.
 
 ---
 
@@ -100,7 +100,7 @@ Tools seperti **OTA Insight** atau **RateGain** memang bisa menjawab pertanyaan 
 ### Platform yang Dipantau
 - **Agoda** ✅ (scraper selesai)
 - **Traveloka** 🚧 (dalam pengerjaan)
-- **Tiket.com** 🚧 (dalam pengerjaan)
+- **Tiket** 🚧 (dalam pengerjaan)
 
 ### Metodologi Pengambilan Data
 - Scraping dilakukan **setiap hari pukul 07.00 WIB**
@@ -111,26 +111,27 @@ Tools seperti **OTA Insight** atau **RateGain** memang bisa menjawab pertanyaan 
 
 ---
 
-## 🗂️ Struktur Database
-
-### Tabel `prices` (Fact Table)
-
-```sql
-CREATE TABLE prices (
-    price_id          VARCHAR PRIMARY KEY,
-    hotel_name        VARCHAR,
-    city              VARCHAR,
-    star_rating       INTEGER,
-    
-    platform          VARCHAR,       -- 'agoda' / 'traveloka' / 'tiket'
-    check_in_date     DATE,
-    check_out_date    DATE,
-    price_idr         BIGINT,        -- harga final
-    rating            FLOAT,
-    review_count      INTEGER,
-    scraped_at        TIMESTAMP
-);
-```
+## 🗂️ Struktur Data
+ 
+### Kolom Output Scraper
+ 
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `hotel_name` | VARCHAR | Nama hotel |
+| `hotel_price` | BIGINT | Harga final per malam (IDR) |
+| `hotel_rating` | INTEGER | Klasifikasi bintang hotel (1–5) |
+| `guest_score` | FLOAT | Nilai rata-rata dari review tamu (0–10) |
+| `review_count` | INTEGER | Jumlah ulasan tamu |
+| `subdistrict` | VARCHAR | Kecamatan / area hotel |
+| `regency` | VARCHAR | Kota / kabupaten hotel |
+| `agoda_property_id` | VARCHAR | ID unik hotel di platform Agoda |
+| `booking_url` | VARCHAR | URL halaman hotel di platform |
+| `image_url` | VARCHAR | URL foto utama hotel |
+| `platform` | VARCHAR | Nama platform (`agoda` / `traveloka` / `tiket`) |
+| `city_search` | VARCHAR | Kota yang digunakan saat pencarian |
+| `check_in_date` | DATE | Tanggal check-in yang di-scrape |
+| `check_out_date` | DATE | Tanggal check-out (selalu H+1 dari check-in) |
+| `scraped_at` | TIMESTAMP | Waktu scraping dijalankan |
 
 ---
 
@@ -193,13 +194,13 @@ hotelops/
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/username/hotelops.git
-cd hotelops
+git clone https://github.com/matimatech/HotelOps.git
+cd HotelOps
 ```
 
 ### 2. Install Dependencies
 ```bash
-pip install -r requirements.txt
+uv sync
 playwright install chromium
 ```
 
@@ -209,9 +210,9 @@ cp .env.example .env
 # Isi MOTHERDUCK_TOKEN di file .env
 ```
 
-### 4. Jalankan Scraper Manual
+### 4. Jalankan Scraper Manual (e.g Agoda)
 ```bash
-python scrapers/agoda/scraper.py --city bali --days 7
+uv run -m scrapers/agoda/scraper.py
 ```
 
 ### 5. Jalankan Airflow (via Docker)
