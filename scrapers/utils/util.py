@@ -1,5 +1,6 @@
 import random
 import time
+import datetime
 
 from tqdm import tqdm
 from datetime import datetime, timedelta
@@ -53,33 +54,35 @@ def extract_hotel_info_agoda(item: any) -> object:
     Mengambil informasi terkait hotel dari tiap element item.
     Args:
         item: The hotel item element.
-        star_rating: The target star rating to match.
-        min_price: Minimum price filter.
-        max_price: Maximum price filter.
         
     Returns:
         dict/None: A dictionary with hotel details if the hotel matches the criteria, otherwise None.
     """
     try:
-        hotel_name_element = item.query_selector("a[data-selenium='hotel-name']")
-        hotel_name = hotel_name_element.text_content() if hotel_name_element else "N/A"
+        card_element = item.query_selector("[data-element-name='property-card-content']")
+        if card_element:
+            # Ambil dari ScreenReaderOnly span yang berisi nama hotel
+            sr_element = item.query_selector(".ScreenReaderOnly__ScreenReaderOnlyStyled-sc-szxtre-0")
+            if sr_element:
+                raw_text = sr_element.text_content().strip()
+                # Hapus suffix " buka di tab baru"
+                hotel_name = raw_text.replace(" buka di tab baru", "").strip()
 
-        if hotel_name == "N/A":
-            hotel_name_element = item.query_selector("h3.sc-aXZVg.Typographystyled__TypographyStyled-sc-1uoovui-0.ifcRDN.bCMrPR")
-            hotel_name = hotel_name_element.text_content() if hotel_name_element else "N/A"
-        
-        # extract address
-
-        #TODO: Still Error in address
-        address = item.query_selector("span.sc-aXZVg.Typographystyled__TypographyStyled-sc-1uoovui-0.ifcRDN.jUTNZD.TextLink__TextStyled-sc-upxc4y-0.cTuyyX").get_attribute('label')
-        print(address)
+        address_element = item.query_selector("[data-selenium='area-city-text']")
+        if address_element:
+            address = item.query_selector(".sc-aXZVg.Typographystyled__TypographyStyled-sc-1uoovui-0.ifcRDN.jUTNZD.TextLink__TextStyled-sc-upxc4y-0.cTuyyX").text_content().strip()
+        else:
+            address = "N/A"
+       
         full_address = address.split(" - ")[0]  # Hasil: "Legian, Bali"
 
         splited = full_address.split(", ")
+        subdistrict = splited[0] if len(splited) > 0 else "N/A"
+        regency = splited[1] if len(splited) > 1 else "N/A"   
 
-        subdistrict = splited[0]
-        regency = splited[1]
-
+        # Extract hotel id
+        hotel_id_element = item.query_selector("[data-element-name='property-card-content']")
+        hotel_id = hotel_id_element.get_attribute("property-id") if hotel_id_element else "N/A"
 
         # Extract hotel rating
         rating_elements = item.query_selector_all("span")
@@ -96,6 +99,17 @@ def extract_hotel_info_agoda(item: any) -> object:
             except Exception:
                 pass
         
+        # Extract review count
+        review_element = item.query_selector("[data-element-name='property-card-review'] p:last-child")
+        review_text = review_element.text_content().strip() if review_element else "N/A"
+        # Hasil: "227 ulasan" → ambil angkanya saja
+        review_count = ''.join(filter(str.isdigit, review_text)) if review_text != "N/A" else "N/A"
+        
+        # Extract guest score
+        guest_score_element = item.query_selector("[data-element-name='property-card-review'] span.iiiJNz")
+        guest_score = guest_score_element.text_content().strip().replace(",", ".") if guest_score_element else "N/A"
+
+
         # Extract hotel price
         price_element = item.query_selector("div[data-element-name='final-price'] span[data-selenium='display-price']")
         price_text = price_element.inner_text() if price_element else "N/A"
@@ -105,7 +119,6 @@ def extract_hotel_info_agoda(item: any) -> object:
                 hotel_price = int(''.join(c for c in price_text if c.isdigit() or c != '.'))
             except Exception:
                 pass
-        
         # Extract booking URL
         booking_url_element = item.query_selector("a[data-selenium='hotel-name']")
         booking_url = booking_url_element.get_attribute("href") if booking_url_element else "N/A"
@@ -117,22 +130,40 @@ def extract_hotel_info_agoda(item: any) -> object:
         main_image_element = item.query_selector("img[data-element-name='ssrweb-mosaicphotos']")
         main_image_url = main_image_element.get_attribute("src") if main_image_element else "N/A"
         
-        if hotel_name == 'N/A' or hotel_price == 'N/A' or hotel_rating == 'N/A' or booking_url == 'N/A' or main_image_url == 'NA':
+
+        if hotel_id == 'N/A' or hotel_name == 'N/A' or hotel_price == 'N/A' or hotel_rating == 'N/A' \
+            or subdistrict == 'N/A' or regency == 'N/A' or review_count == 'N/A' or guest_score == 'N/A' \
+            or booking_url == 'N/A' or main_image_url == 'NA':
             return None
-        
-        return {
+        print({
+            'hotel_id': int(hotel_id),
             'hotel_name': hotel_name,
             'hotel_price': hotel_price,
-            'hotel_rating': hotel_rating,
+            'hotel_rating': int(hotel_rating),
             'subdistrict': subdistrict,
             'regency': regency,
+            'review_count': int(review_count),
+            'guest_score': float(guest_score),
             'booking_url': 'https://www.agoda.com'+ booking_url,
             'image_url': 'https:'+ main_image_url
+        })
+        return {
+            'hotel_id': int(hotel_id),
+            'hotel_name': hotel_name,
+            'hotel_price': hotel_price,
+            'hotel_rating': float(hotel_rating),
+            'subdistrict': subdistrict,
+            'regency': regency,
+            'review_count': int(review_count),
+            'guest_score': float(guest_score),
+            'booking_url': 'https://www.agoda.com'+ booking_url,
+            'image_url': 'https:'+ main_image_url,
+            'scraped_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
     
     except Exception as e:
         print(f"Error extracting hotel information: {e}")
- 
+
 
 def scroll_and_navigate_all_results_agoda(page) -> object:
     """
@@ -192,13 +223,17 @@ def scroll_and_navigate_all_results_agoda(page) -> object:
         hotel_items = page.query_selector_all("//*[@id='contentContainer']//ol[@class='hotel-list-container']//li[@data-selenium='hotel-item']")
         
         for item in tqdm(hotel_items, desc=f"Processing page {page_num}"):
+            # ✅ Scroll item ke viewport dulu sebelum extract
+            item.scroll_into_view_if_needed()
+            page.wait_for_timeout(500)  # tunggu lazy load triggered
+
             hotel_data = extract_hotel_info_agoda(item)
             if hotel_data:
                 hotel_info.append(hotel_data)
-                print(f"Added hotel: {hotel_data['hotel_name']} (${hotel_data['hotel_price']}, {hotel_data['hotel_rating']} stars)")
-        
+                print(f"Added hotel: {hotel_data['hotel_name']} (Rp.{hotel_data['hotel_price']}, {hotel_data['hotel_rating']} stars)")
+
         print(f"Extracted {len(hotel_info)} matching hotels so far.")
-        
+
         # Check if "Next" button exists
         next_button_visible = page.is_visible('//*[@id="paginationNext"]')
         if not next_button_visible:
