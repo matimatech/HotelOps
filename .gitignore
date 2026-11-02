@@ -1,23 +1,17 @@
-# Python environment
 .venv/
 __pycache__/
-
-# Data Ingestion (Bronze, Silver, Gold)
+*.py[cod]
 data/
 outputs/
-*.json
-*.csv
-*.parquet
-
-# Databases
 *.db
 *.sqlite3
-
-# Security & Config
+*.duckdb
+*.duckdb.wal
 .env
 auth.json
-.airflow/
-
-# Playwright
+scrapers/cookies/
+playwright-report/
 test-results/
-pw-report/
+.dbt/
+dbt_packages/
+logs/
